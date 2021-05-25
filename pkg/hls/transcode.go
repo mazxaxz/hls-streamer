@@ -5,22 +5,24 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"strconv"
 )
 
-func Transcode(_ context.Context, input, outputDir string) error {
+func Transcode(_ context.Context, input, outputDir string, opt Options) error {
 	if _, err := os.Stat(outputDir); os.IsNotExist(err) {
 		if err := os.MkdirAll(outputDir, os.ModePerm); err != nil {
 			return err
 		}
 	}
 
+	hz := strconv.Itoa(opt.AudioSamplingRate)
 	args := []string{
 		"-i", input,
 		"-c:a", "aac",
-		"-ar", "48000",
-		"-b:a", "192k",
+		"-ar", hz,
+		"-b:a", opt.AudioBitrate,
 		"-c:v", "h264", "-profile:v", "main",
-		"-b:v", "5000k", "-maxrate", "5350k", "-bufsize", "7500k",
+		"-b:v", opt.VideoBitrate, "-maxrate", opt.VideoMaxRate, "-bufsize", opt.VideoBufSize,
 		"-crf", "20",
 		"-g", "48", "-keyint_min", "48", "-sc_threshold", "0",
 		"-hls_time", "4", "-hls_playlist_type", "vod",

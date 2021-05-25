@@ -14,7 +14,8 @@ import (
 
 	"github.com/mazxaxz/hls-streamer/cmd/apid/config"
 	"github.com/mazxaxz/hls-streamer/cmd/apid/hlshttphandler"
-	"github.com/mazxaxz/hls-streamer/internal/hls"
+	"github.com/mazxaxz/hls-streamer/cmd/apid/videowatcher"
+	"github.com/mazxaxz/hls-streamer/pkg/hls"
 	"github.com/mazxaxz/hls-streamer/pkg/logger"
 	"github.com/mazxaxz/hls-streamer/pkg/osdir"
 	"github.com/mazxaxz/hls-streamer/pkg/shutdown"
@@ -33,12 +34,11 @@ func main() {
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	// handlers
-	hlsService := hls.NewService(cfg.HLSDirectory)
+	videoWatcher := videowatcher.New(cfg.HLSDirectory)
 	hlsHttpHandler := hlshttphandler.New(cfg.HLSDirectory, log)
 
 	transcodeExisting(ctx, cfg.RawDirectory, cfg.HLSDirectory)
-	go osdir.Watch(ctx, log, cfg.RawDirectory, hlsService.WatchCallback)
+	go osdir.Watch(ctx, log, cfg.RawDirectory, videoWatcher.WatchCallback)
 
 	srv := http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.HTTP.Port),
@@ -78,7 +78,14 @@ func transcodeExisting(ctx context.Context, rawDir, hlsDir string) {
 			}
 			log.WithContext(ctx).WithField("file", file.Name()).Info("transcoding...")
 			dir := strings.ReplaceAll(file.Name(), ".", "_")
-			if err := hls.Transcode(ctx, path.Join(rawDir, file.Name()), path.Join(hlsDir, dir)); err != nil {
+			options := hls.Options{
+				VideoBitrate:      "5000k",
+				VideoMaxRate:      "5350k",
+				VideoBufSize:      "7500k",
+				AudioBitrate:      "192k",
+				AudioSamplingRate: 48000,
+			}
+			if err := hls.Transcode(ctx, path.Join(rawDir, file.Name()), path.Join(hlsDir, dir), options); err != nil {
 				log.WithContext(ctx).Error(err)
 			}
 			log.WithContext(ctx).WithField("file", file.Name()).Info("transcoding finished")
