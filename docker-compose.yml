@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  apid:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - 38085:8085
+    volumes:
+      - "./videos/raw:/var/videos/raw:ro"
+    environment:
+      HTTP: "{\"port\":8085}"
+      LOGGER: "{\"log_level\":\"info\",\"output_type\":\"json\"}"
+      RAW_DIRECTORY: "/var/videos/raw"
+      HLS_DIRECTORY: "/var/videos/hls"
